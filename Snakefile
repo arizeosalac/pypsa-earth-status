@@ -14,6 +14,7 @@ from helpers import create_country_list
 
 configfile: "config.yaml"
 
+
 rule clean:
     run:
         try:
@@ -26,9 +27,9 @@ rule clean_data:
     params:
         datasets=config["datasets"],
     input:
-        demand_owid="data/owid-energy-data.csv",  # from https://nyc3.digitaloceanspaces.com/owid-public/data/energy/owid-energy-data.csv
+        demand_owid="data/electricity_demand/owid-energy-data.csv",  # from https://nyc3.digitaloceanspaces.com/owid-public/data/energy/owid-energy-data.csv
         demand_iea="data/WEO2023_AnnexA_Free_Dataset_Regions.csv",  # from https://www.iea.org/data-and-statistics/data-product/world-energy-outlook-2023-free-dataset-2
-        cap_irena="data/ELECSTAT_20240808-144258.csv",  # IRENA capacity data from https://pxweb.irena.org/pxweb/en/IRENASTAT/IRENASTAT__Power%20Capacity%20and%20Generation/Country_ELECSTAT_2024_H2.px/
+        cap_irena="data/installed_capacity/ELECSTAT_20240808-144258.csv",  # IRENA capacity data from https://pxweb.irena.org/pxweb/en/IRENASTAT/IRENASTAT__Power%20Capacity%20and%20Generation/Country_ELECSTAT_2024_H2.px/
         # other sources
     output:
         demand_owid="resources/clean/owid_demand_data.csv",
@@ -41,14 +42,16 @@ rule clean_data:
 
 rule build_network_geojson:
     input:
-        buscodes="data/electricity-transmission-database/Input - Center points.csv",
-        lineexist="data/electricity-transmission-database/GTD-v1.1_regional_existing.csv",
-        lineplan="data/electricity-transmission-database/GTD-v1.1_regional_planned.csv",
-        network_path=config["network_validation"]["network_path"], 
+        buscodes="data/electricity_transmission/Input - Center points.csv",
+        lineexist="data/electricity_transmission/GTD-v1.1_regional_existing.csv",
+        lineplan="data/electricity_transmission/GTD-v1.1_regional_planned.csv",
+        network_path=config["network_validation"]["network_path"],
     params:
         countries=config["network_validation"]["countries"],
         shapefile=config["network_validation"].get("shapefile", False),
-        validate_cross_border_capacity=config["network_validation"].get("validate_cross_border_capacity", True),
+        validate_cross_border_capacity=config["network_validation"].get(
+            "validate_cross_border_capacity", True
+        ),
     output:
         network_existing="resources/reference_statistics/network_exist.geojson",
         network_planned="resources/reference_statistics/network_planned.geojson",
@@ -80,7 +83,7 @@ rule build_network_statistics:
     params:
         network=config["network_validation"],
     input:
-        network_path=config["network_validation"]["network_path"]
+        network_path=config["network_validation"]["network_path"],
         # other sources
     output:
         demand="resources/network_statistics/demand.csv",
@@ -136,13 +139,15 @@ rule visualize_data:
     script:
         "scripts/visualize_data.py"
 
+
 rule create_example_DE:
     output:
-        "resources/example_DE.nc"
+        "resources/example_DE.nc",
     log:
         "logs/create_example_DE.log",
     run:
         import pypsa
+
         n = pypsa.examples.scigrid_de()
         n.buses["country"] = "DE"
         n.export_to_netcdf(output[0])
